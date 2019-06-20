@@ -1,7 +1,9 @@
 import argparse as arg
 import os.path
-from jiraParser import JiraParser
+from jiraFileParser import JiraParser
 from mapping import Mapping
+from jira import JIRA
+
 
 parser = arg.ArgumentParser()
 parser.add_argument('filename')
