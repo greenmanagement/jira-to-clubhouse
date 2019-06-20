@@ -1,0 +1,22 @@
+{
+    "users": [
+        {
+            "jira_username": "admin",
+            "ch_userid": "1234"
+        }
+    ]
+
+    "states": [
+	{
+	    "jira_statename": "",
+	    "ch_stateid": ""
+	}
+    ]
+
+    "projects": [
+	{
+	    "jira_projectid": "",
+	    "ch_projectid": ""
+	}
+    ]
+}
