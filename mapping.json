@@ -4,19 +4,41 @@
             "jira_username": "admin",
             "ch_userid": "1234"
         }
-    ]
+    ],
 
-    "states": [
-	{
-	    "jira_statename": "",
-	    "ch_stateid": ""
-	}
-    ]
-
-    "projects": [
-	{
-	    "jira_projectid": "",
-	    "ch_projectid": ""
-	}
-    ]
+    "statuses": {
+      "Open":  null,
+      "In Progress":  null,
+      "Reopened":  null,
+      "Resolved":  null,
+      "Closed":  null,
+      "Proposed":  null,
+      "Selected for Development":  null,
+      "Done":  null,
+      "To Do":  null,
+      "To be tested":  null,
+      "Canceled":  null,
+      "In Review":  null,
+      "Waiting for support":  null,
+      "Waiting for customer":  null,
+      "Pending":  null,
+      "Escalated":  null,
+      "Work in progress":  null,
+      "Rejected":  null,
+      "Waiting Approval":  null,
+      "Accepted":  null,
+      "Planned":  null,
+      "Deployed":  null,
+      "Backlog":  null
+    },
+    "projects": {
+      "ECOM": null,
+      "NA": "NewArchitecture",
+      "OMG": null,
+      "OP": "TestPortal",
+      "OPF": null,
+      "MGT": null,
+      "SD": null
+	},
+  "fields": ["summary"]
 }
