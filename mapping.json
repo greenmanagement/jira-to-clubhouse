@@ -1,53 +1,65 @@
 {
   "jira": {
-    "server": "opexalliance.atlassian.net",
+    "server": "https://opexalliance.atlassian.net",
     "user": "aurelien@opexalliance.com",
     "token": "5MpeeKC4jHBy5D1ebke0E6E3"
   },
   "clubhouse": {
-    "token": "5d1f4618-df4e-4984-8d72-de337a1419b5"
+    "token": "5d4079e7-42b9-4824-bbef-b741b1b78710"
   },
-  "users": {
-    "admin": "aurelienslodzian",
-    "lisa": "aurelienslodzian",
-    "duboiscorenthin": "aurelienslodzian"
+  "attachments": {
+    "folder": "/Users/aurelien/Downloads/jira2clubhouse"
   },
-  "statuses": {
-    "In Progress": "In Development",
-    "Selected for Development": "Ready for Development",
-    "Done": "Completed",
-    "To be tested": "Ready for Review",
-    "Canceled": "Completed",
-    "In Review": "Ready for Review",
-    "Backlog": "Unscheduled"
-  },
-  "epic-statuses": {
-    "In Progress": "In Progress",
-    "Selected for Development": "To Do",
-    "Done": "Done",
-    "To be tested": "In Progress",
-    "Canceled": "Done",
-    "In Review": "In Progress",
-    "Backlog": "To Do"
-  },
-  "link_types": {
-    "Duplicate": null,
-    "Blocks": null,
-    "Relates": null,
-    "Tested by": null,
-    "Problem/Incident": null,
-    "Cloners": null
-  },
-  "projects": {
-    "ECOM": null,
-    "NA": "NewArchitecture",
-    "OMG": null,
-    "OP": null,
-    "OPF": null,
-    "MGT": null,
-    "SD": null
-  },
-  "fields": [
-    "summary"
-  ]
+  "projects": [ "NA"],
+  "noprojects": ["ECOM", "NA", "OMG", "OP", "OPF", "MGT", "SD" ],
+  "mappings": {
+    "users": {
+      "admin": "aurelienslodzian",
+      "lisa": "aurelienslodzian",
+      "duboiscorenthin": "aurelienslodzian"
+    },
+    "status": {
+        "In Progress": "In Development",
+        "Selected for Development": "Ready for Development",
+        "Done": "Completed",
+        "To be tested": "Ready for Review",
+        "Canceled": "Canceled",
+        "In Review": "Ready for Review",
+        "Backlog": "Unscheduled"
+      },
+    "subtask": {
+        "In Progress": false,
+        "Selected for Development": false,
+        "Done": true,
+        "To be tested": false,
+        "Canceled": true,
+        "In Review": false,
+        "Backlog": false
+      },
+    "epic": {
+        "In Progress": "in progress",
+        "Selected for Development": "to do",
+        "Done": "done",
+        "To be tested": "in progress",
+        "Canceled": "done",
+        "In Review": "in progress",
+        "Backlog": "to do"
+      },
+    "links": {
+      "Duplicate": "duplicates",
+      "Blocks": "blocks",
+      "Relates": "relates to",
+      "Tested by": null,
+      "Problem/Incident": null,
+      "Cloners": "duplicates"
+    },
+    "stories": {
+      "Task": "chore",
+      "Sub-task": null,
+      "Story": "feature",
+      "Bug": "bug",
+      "Epic":  null,
+      "Test": null
+    }
+  }
 }

@@ -1,6 +1,7 @@
 import json
-from jira import JIRA # https://jira.readthedocs.io
-from projects import Project, Status, Issue, Link
+from jira import JIRA  # https://jira.readthedocs.io
+from project import Project, Status, Link
+from issue import Issue
 
 
 class Importer:
@@ -51,7 +52,7 @@ class Importer:
                                                        "subtasks", "summary",
                                                        "updated", "duedate"])
             for i in batch:
-                the_issue = Issue(i.fields.issuetype, i.key, i.id)
+                the_issue = Issue(i.fields.issuetype.name, i.key, i.id)
                 try:
                     the_issue.assignee = i.fields.assignee.name
                 except AttributeError:
@@ -68,15 +69,14 @@ class Importer:
                 if i.fields.issuelinks:
                     the_issue.links = [(link.type.name, link.outwardIssue.key)
                                        for link in i.fields.issuelinks
-                                       if hasattr(link, 'outwardIssue')] # MUST BE RESOLVED below
+                                       if hasattr(link, 'outwardIssue')]  # MUST BE RESOLVED below
                 the_issue.subtasks = [sub.key for sub in i.fields.subtasks]
-                #comments
+                # comments
                 the_issue.comments = [{"body": c.body,
                                        "author": c.author.name,
                                        "created": c.created,
-                                       #"id": c.id
-                                       }
-                                        for c in i.fields.comment.comments]
+                                       "id": c.id}
+                                      for c in i.fields.comment.comments]
                 project.add_issue(the_issue)
             n = n + len(batch)
             if len(batch) < 50:
@@ -84,7 +84,7 @@ class Importer:
 
         # In the end, reconcile issue links
         for i in project.issues:
-            if i.issue_type.name == 'Epic':
+            if i.issue_type == 'Epic':
                 project.epics.append(i)
 
             # Resolve Epics
@@ -105,11 +105,3 @@ class Importer:
         project.users = list({x: ""
                               for x in [i.assignee for i in project.issues] + [i.reporter for i in project.issues]
                               if x is not None}.keys())
-
-
-
-
-
-
-
-

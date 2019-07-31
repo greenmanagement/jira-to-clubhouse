@@ -1,5 +1,5 @@
 from clubhouse import ClubhouseClient
-from projects import Project
+from project import Project
 
 class Exporter:
     def __init__(self, token):
@@ -10,6 +10,7 @@ class Exporter:
         self._epic_statuses = None
         self._epics = {}
         self._stories = {}
+        self.clubhouse_id = None
 
     def test(self):
         self.connect()
@@ -61,31 +62,44 @@ class Exporter:
 
     def export_project(self, project, mapping):
         ch_epics = self.epics()
+        # First: epics
         for epic in project.epics:
-            self.create_or_update_epic(epic, mapping,
-                                       ch_epics[epic.summary] if epic.summary in ch_epics else None)
+            epic.clubhouse_id = ch_epics[epic.summary] if epic.summary in ch_epics else None
+            if not epic.clubhouse_id:
+                self.create_epic(epic, mapping)
+            else:
+                self.update_epic(epic, mapping)
 
+        # Second: issues
         for issue in project.issues:
             if issue.issue_type.name != "Epic":
                 self.create_story(issue, mapping)
 
+        # Third: links
+
     def create_story(self, issue, mapping, ch_id=None):
         json = {
-            "epic_state_id": self.status_id(mapping.map_status(issue.status)),
+            "workflow_state_id": self.status_id(mapping.map_status(issue.status)),
             "name": issue.summary,
             "author_id": self.members()[mapping.map_user(issue.reporter)],
-            "story_type": issue.issue_type.name,
+            "story_type": None, #TODO: issue.issue_type.name, "feature", "chore", "bug"
             "created_at": issue.created,
             "updated_at": issue.updated,
-            "external_id": "JIRA: {}".format(issue.name)}
+            "external_id": "JIRA: {}".format(issue.name),
+            "project_id": None, # TODO
+        }
 
         if issue.duedate: json["deadline"] = issue.duedate
         if issue.description: json["description"] =  issue.description
         if issue.assignee: json["owner_ids"] = [self.members()[mapping.map_user(issue.assignee)]]
-        if issue.epic: json["epic_id"] =
+        if issue.epic: json["epic_id"] = None # TODO: issue.epic
+
+        # TODO: tasks
+        # TODO: story_links
+        # TODO: files
 
         response = self._client.post('stories', json=json)
-        ch_id = response["id"]
+        issue.clubhouse_id = response["id"]
 
         for c in issue.comments:
             self._client.post("stories", ch_id, 'comments',
@@ -94,34 +108,52 @@ class Exporter:
                                       "text": c["body"]})
 
 
-    def create_or_update_epic(self, epic, mapping, ch_id):
+    def create_epic(self, epic, mapping):
         json = {
             "epic_state_id": self.epic_status_id(mapping.map_epic_status(epic.status)),
             "name": epic.summary,
             "requested_by_id": self.members()[mapping.map_user(epic.reporter)],
+            "created_at": epic.created,
+            "updated_at": epic.updated,
+            "external_id": "JIRA: {}".format(epic.name)
         }
-        if not ch_id:
-            json["created_at"] = epic.created
-            json["updated_at"] = epic.updated
-            json["external_id"] = "JIRA: {}".format(epic.name)
+
+        if epic.duedate: json["deadline"] = epic.duedate
+        if epic.description: json["description"] = epic.description
+        if epic.assignee: json["owner_ids"] = [self.members()[mapping.map_user(epic.assignee)]]
+
+        response = self._client.post('epics', json=json)
+        epic.clubhouse_id = response["id"]
+
+    def update_epic(self, epic, mapping):
+        json = {
+            "epic_state_id": self.epic_status_id(mapping.map_epic_status(epic.status)),
+            "name": epic.summary,
+            "requested_by_id": self.members()[mapping.map_user(epic.reporter)],
+            #"created_at": epic.created,
+            "updated_at": epic.updated,
+            #"external_id": "JIRA: {}".format(epic.name)
+        }
 
         if epic.duedate: json["deadline"] = epic.duedate
         if epic.description: json["description"] =  epic.description
         if epic.assignee: json["owner_ids"] = [self.members()[mapping.map_user(epic.assignee)]]
 
-        if not ch_id:
-            response = self._client.post('epics', json=json)
-            ch_id = response["id"]
-            self._epics[epic.summary] = ch_id
-        else:
-            response = self._client.put('epics', ch_id, json=json)
-            # When update: delete comments (will be overwritten)
-            # Note: this is bad, we should overwrite existing comments instead
-            for c in self._client.get("epics", ch_id, "comments"):
-                self._client.delete("epics", ch_id, "comments", c["id"])
+        self._client.put('epics', epic.clubhouse_id, json=json)
+        self.add_comments(epic, mapping)
 
-        for c in epic.comments:
-            self._client.post("epics", ch_id, 'comments',
-                              json = {"author_id": self.members()[mapping.map_user(c["author"])],
-                                      "created_at": c["created"],
-                                      "text": c["body"]})
+    def add_comments(self, item, mapping):
+        url = mapping["issue_urls"][item.issue_type.name.lower()]
+        # delete existing comments
+        # Note: this is bad, we should overwrite existing comments instead
+        ch_comments = {c["external_id"]: c for c in self._client.get(url, item.clubhouse_id, "comments")}
+        for c in item.comments:
+            json = {"author_id": self.members()[mapping.map_user(c["author"])],
+                    "created_at": c["created"],
+                    "text": c["body"]
+                    }
+            if c["id"] in ch_comments:
+                self._client.put(url, item.clubhouse_id, 'comments', ch_comments[c["id"]]["id"], json)
+            else:
+                json["external_id"] = c["id"]
+                self._client.post(url, item.clubhouse_id, 'comments', json)
