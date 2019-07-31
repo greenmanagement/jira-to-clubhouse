@@ -3,7 +3,7 @@ from jiratools import JiraTools
 from link import Link
 import os
 from registry import Member, StoryState, EpicState
-
+import re
 
 # ----------------------------------------
 # class Issue
@@ -35,6 +35,7 @@ class Issue:
         self.attachments = [Attachment(a) for a in fields.attachment]
         self.subtasks = None
         self.links = []
+        self.sprints = [re.search("id=([0-9]+),", sprint).group(1) for sprint in fields.customfield_10115] if fields.customfield_10115 else []
         for link in fields.issuelinks:
             target_type = Config.dict.mappings.link_types[link.type.name]
             if hasattr(link, 'outwardIssue') and target_type:  # keep only types that exist in the mapping
@@ -47,6 +48,7 @@ class Issue:
     @project.setter
     def project(self, project):
         self._project = project
+        project.add_to_sprints(self, self.sprints) # when project is defined, then add issue to project sprints
 
     def __str__(self):
         return "<{} {} '{}'>".format(type(self).__name__, self.source.key, self.name)
@@ -110,7 +112,6 @@ class Comment:
         """ Method to save a comment. May be used instead of including the jons in the item creation itself"""
         response = Config.clubhouse_client.post(self.issue.urlbase, self.issue.target, 'comments', json=self.json())
         self.target = response["id"]
-
 
 # ----------------------------------------
 # class Epic

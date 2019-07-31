@@ -3,13 +3,15 @@ from jiratools import JiraTools
 from issue import Epic, Story
 from registry import Member
 
-class Project():
+
+class Project:
     urlbase = 'projects'
 
     def __init__(self, jira_project):
         self.source = jira_project
         self.target = None
         self.name = self.source.name
+        self.sprints = {}
         self.description = self.source.description
         self.owner = Member(self.source.lead.name)
         # Get all epics in project (and collect the issues in each epic)
@@ -52,3 +54,31 @@ class Project():
             for s in stories:
                 Config.clubhouse_client.delete(Story.urlbase, s['id'])
             Config.clubhouse_client.delete(self.urlbase, the_project['id'])
+
+    def add_to_sprints(self, issue, sprint_ids):
+        # TODO: refactor this code - it is not very elegant
+        sprint_objects = []
+        for id in sprint_ids:
+            if id in self.sprints:
+                sprint = self.sprints[id]
+            else:
+                sprint = Sprint(id)
+                self.sprints[id] = sprint
+            sprint.add_issue(issue)
+            sprint_objects.append(sprint)
+        issue.sprints = sprint_objects
+
+
+class Sprint:
+    def __init__(self, id):
+        jira_sprint = Config.jira_client.sprint(id)
+        self.source = jira_sprint
+        self.issues = []
+
+    def add_issue(self, issue):
+        self.issues.append(issue)
+
+
+
+
+

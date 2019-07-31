@@ -1,6 +1,6 @@
 class JiraTools:
     jira_fields = ["assignee", "comment", "components",
-                   "customfield_10005",
+                   "customfield_10005", "customfield_10115",
                    "created", "description",
                    "issuelinks", "issuetype",
                    "reporter", "status",
@@ -46,11 +46,11 @@ class JiraTools:
                                                  "parent = '{}'".format(key)])
 
 
-    @classmethod
-    def load_issue(cls, jira, key):
-        return jira.search_issues("key = '{}'".format(key),
-                           startAt=0, maxResults=1,
-                           fields=cls.jira_fields)[0]
+    #@classmethod
+    #def load_issue(cls, jira, key):
+    #    return jira.search_issues("key = '{}'".format(key),
+    #                       startAt=0, maxResults=1,
+    #                       fields=cls.jira_fields)[0]
 
     @classmethod
     def issue_watchers(cls, jira, issue):
