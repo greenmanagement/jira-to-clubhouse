@@ -1,9 +1,12 @@
+from config import Config
 
 class Link:
     """
     Class to store links between issues.
     It will dynamically resolve references in ako "lazy" manner
     """
+    urlbase = "story-links"
+
     def __init__(self, from_issue, to_issue, link_type):
         """
         The origin or the destination of the link must be an Issue object.
@@ -17,8 +20,10 @@ class Link:
         self.origin= from_issue
         self.destination = to_issue
         self.link_type = link_type
+        self.target_id = None
 
-    def source(self):
+    @property
+    def subject(self):
         """
         Returns the source Issue of the link
         Optionally resolves the link (replace the key with the referenced issue)
@@ -28,10 +33,11 @@ class Link:
         if isinstance(self.origin, Issue):
             return self.origin
         else:
-            self.origin = self.destination.project.index[self.origin]
+            self.origin = self.destination.project.issue_index[self.origin]
             return self.origin
 
-    def target(self):
+    @property
+    def object(self):
         """
         Returns the target Issue of the link
         Optionally resolves the link (replace the key with the referenced issue)
@@ -41,10 +47,20 @@ class Link:
         if isinstance(self.destination, Issue):
             return self.destination
         else:
-            self.destination= self.origin.project.index[self.destination]
+            self.destination= self.origin.project.issue_index[self.destination]
             return self.destination
 
+    def json(self):
+        json = {
+            "object_id": self.object.target,
+            "subject_id": self.subject.target,
+            "verb": self.link_type
+        }
+        return json
 
+    def save(self):
+        response = Config.clubhouse_client.post(self.urlbase, json=self.json())
+        self.target_id = response["id"]
 
 
 

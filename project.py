@@ -2,7 +2,7 @@ from config import Config
 from jiratools import JiraTools
 from issue import Epic, Story
 from registry import Member
-
+import logging
 
 class Project:
     urlbase = 'projects'
@@ -11,6 +11,7 @@ class Project:
         self.source = jira_project
         self.target = None
         self.name = self.source.name
+
         self.sprints = {}
         self.description = self.source.description
         self.owner = Member(self.source.lead.name)
@@ -37,13 +38,21 @@ class Project:
 
     def save(self):
         self.delete()
+        logging.info("Saving target project '{}'".format(self.name))
         response = Config.clubhouse_client.post(self.urlbase, json=self.json())
         self.target = response['id']
+        logging.info("Saving epics")
         for e in self.epics:
             e.save()
+        logging.info("Saving stories without epics")
         for s in self.no_epics:
             s.save()
-        for s in self.sprints.items():
+        # save all links (must be done after all stories are saved)
+        logging.info("Saving links")
+        [l.save() for key,s in self.issue_index.items() for l in s.links]
+
+        logging.info("Saving sprints")
+        for key, s in self.sprints.items():
             s.save()
 
     def delete(self):
@@ -52,6 +61,7 @@ class Project:
         projects = Config.clubhouse_client.get(self.urlbase)
         the_project = next((p for p in projects if p['external_id'] == self.source.key), None)
         if the_project:
+            logging.info("Deleting target project #{}".format(the_project['id']))
             stories = Config.clubhouse_client.get(self.urlbase, the_project['id'], 'stories')
             for s in stories:
                 Config.clubhouse_client.delete(Story.urlbase, s['id'])

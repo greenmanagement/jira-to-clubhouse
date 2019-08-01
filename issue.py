@@ -4,6 +4,7 @@ from link import Link
 import os
 from registry import Member, StoryState, EpicState
 import re
+import logging
 
 # ----------------------------------------
 # class Issue
@@ -37,7 +38,7 @@ class Issue:
         self.links = []
         self.sprints = [re.search("id=([0-9]+),", sprint).group(1) for sprint in fields.customfield_10115] if fields.customfield_10115 else []
         for link in fields.issuelinks:
-            target_type = Config.dict.mappings.link_types[link.type.name]
+            target_type = Config.mapping("links").get(link.type.name)
             if hasattr(link, 'outwardIssue') and target_type:  # keep only types that exist in the mapping
                 self.links.append(Link(self, link.outwardIssue.key, target_type))
 
@@ -144,6 +145,7 @@ class Epic(Issue):
         return json
 
     def save(self):
+        logging.info("Saving epic '{}'".format(self.name))
         self.delete()
         super().save()
         for s in self.stories:
@@ -190,6 +192,7 @@ class Story(Issue):
         return json
 
     def save(self):
+        logging.info("Saving story '{}'".format(self.name))
         # 0. Upload the files (so that they have an id)
         [a.save() for a in self.attachments]
 
@@ -198,9 +201,6 @@ class Story(Issue):
         # 2. Add subtasks
         if self.subtasks:
             [s.save() for s in self.subtasks]
-
-        # TODO: story_links
-
 
 # ----------------------------------------
 # class Subtask
