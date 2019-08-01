@@ -74,7 +74,9 @@ class Issue:
         if self.owners: json["owner_ids"] = [o.public_id for o in self.owners]
         if self.followers: json["follower_ids"] = [f.public_id for f in self.followers]
         #if self.comments: json["comments"] = [c.json() for c in self.comments]
-
+        sprint_labels = [{"name": "Sprint: {}".format(s.name)} for s in self.sprints]
+        if sprint_labels:
+            json["labels"] = sprint_labels
         return json
 
     def save(self):

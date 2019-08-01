@@ -43,6 +43,8 @@ class Project:
             e.save()
         for s in self.no_epics:
             s.save()
+        for s in self.sprints.items():
+            s.save()
 
     def delete(self):
         """Deletes a project and the stories it contains"""
@@ -73,12 +75,14 @@ class Sprint:
     def __init__(self, id):
         jira_sprint = Config.jira_client.sprint(id)
         self.source = jira_sprint
+        self.name = jira_sprint.name
         self.issues = []
 
     def add_issue(self, issue):
         self.issues.append(issue)
 
-
-
-
-
+    def save(self):
+        """Sprints are saved as labels (not as interations).
+        Reason: Jira sprints are not required to have start/end dates - but Clubhouse iterations do.
+        => no save procedure, the sprint info is saved in the Issue.save() method"""
+        pass
