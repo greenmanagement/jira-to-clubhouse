@@ -10,8 +10,8 @@
   "attachments": {
     "folder": "/Users/aurelien/Downloads/jira2clubhouse"
   },
-  "projects": [ "NA"],
-  "noprojects": ["ECOM", "NA", "OMG", "OP", "OPF", "MGT", "SD" ],
+  "projects": [ "OPF"],
+  "noprojects": ["NA" ,"ECOM", "OMG", "OP", "OPF", "MGT", "SD" ],
   "mappings": {
     "users": {
       "admin": "aurelienslodzian",
@@ -25,7 +25,8 @@
         "To be tested": "Ready for Review",
         "Canceled": "Canceled",
         "In Review": "Ready for Review",
-        "Backlog": "Unscheduled"
+        "Backlog": "Unscheduled",
+        "Proposed": "Unscheduled"
       },
     "subtask": {
         "In Progress": false,
@@ -41,9 +42,14 @@
         "Selected for Development": "to do",
         "Done": "done",
         "To be tested": "in progress",
-        "Canceled": "done",
+        "Canceled": "canceled",
         "In Review": "in progress",
-        "Backlog": "to do"
+        "Rejected": "canceled",
+        "Backlog": "to do",
+        "Accepted": "to do",
+        "Planned": "to do",
+        "Deployed": "done",
+        "Proposed": "Proposed"
       },
     "links": {
       "Duplicate": "duplicates",

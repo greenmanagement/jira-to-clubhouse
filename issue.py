@@ -2,7 +2,7 @@ from config import Config
 from jiratools import JiraTools
 from link import Link
 import os
-from registry import Member, StoryState, EpicState
+from registry import Members, StoryStates, EpicStates
 import re
 import logging
 
@@ -27,12 +27,12 @@ class Issue:
         self.external_id = "JIRA_{}".format(self.source.key)
         self.deadline = fields.duedate
         self.description = fields.description
-        self.owners = [Member(fields.assignee.key)] if fields.assignee else None
-        self.requester = Member(fields.reporter.key)
-        self.comments = [Comment(self, c.id, Member(c.author.key), c.created, c.body)
+        self.owners = [Config.mapping('users').get(fields.assignee.key)] if fields.assignee else None
+        self.requester = Config.mapping('users').get(fields.reporter.key)
+        self.comments = [Comment(self, c.id, Config.mapping('users').get(c.author.key), c.created, c.body)
                          for c in fields.comment.comments]
         self.components = fields.components
-        self.followers = [Member(u.name) for u in JiraTools.issue_watchers(Config.jira_client, self.source)]
+        self.followers = [Config.mapping('users').get(u.name) for u in JiraTools.issue_watchers(Config.jira_client, self.source)]
         self.attachments = [Attachment(a) for a in fields.attachment]
         self.subtasks = None
         self.links = []
@@ -64,7 +64,7 @@ class Issue:
         """
         json = {
             "name": self.name,
-            "requested_by_id": self.requester.public_id,
+            "requested_by_id": Members.get_id(self.requester),
             "created_at": self.created,
             "updated_at": self.updated,
             "external_id": self.external_id, #"JIRA: {}".format(self.source.key)
@@ -72,8 +72,8 @@ class Issue:
 
         if self.deadline: json["deadline"] = self.deadline
         if self.description: json["description"] = self.description
-        if self.owners: json["owner_ids"] = [o.public_id for o in self.owners]
-        if self.followers: json["follower_ids"] = [f.public_id for f in self.followers]
+        if self.owners: json["owner_ids"] = [Members.get_id(o) for o in self.owners]
+        if self.followers: json["follower_ids"] = [Members.get_id(f) for f in self.followers]
         #if self.comments: json["comments"] = [c.json() for c in self.comments]
         sprint_labels = [{"name": "Sprint: {}".format(s.name)} for s in self.sprints]
         if sprint_labels:
@@ -105,7 +105,7 @@ class Comment:
 
     def json(self):
         return {
-            "author_id": self.author.public_id,
+            "author_id": Members.get_id(self.author),
             "created_at": self.date,
             "external_id": self.key,
             "text": self.comment
@@ -127,7 +127,7 @@ class Epic(Issue):
 
     def __init__(self, jira_epic):
         super().__init__(jira_epic)
-        self.status = EpicState(self.source.fields.status.name)
+        self.status = Config.mapping('epic').get(self.source.fields.status.name)
         self.stories = [Story(s) for s in JiraTools.get_epic_issues(Config.jira_client, epic=self.source.key)]
         for s in self.stories:
             s.epic = self
@@ -141,7 +141,7 @@ class Epic(Issue):
     def json(self):
         """ Return the json to create the item in Clubhouse """
         json = super().json() # default json
-        json["epic_state_id"] = self.status.public_id
+        json["epic_state_id"] = EpicStates.get_id(self.status)
         return json
 
     def save(self):
@@ -171,7 +171,7 @@ class Story(Issue):
     def __init__(self, jira_issue):
         super().__init__(jira_issue)
         self.story_type = Config.mapping('stories').get(self.source.fields.issuetype.name)
-        self.status = StoryState(self.source.fields.status.name)
+        self.status = Config.mapping('status').get(self.source.fields.status.name)
         self.subtasks = []
         if jira_issue.fields.subtasks:
             self.subtasks = [Subtask(s) for s in JiraTools.get_subtasks(Config.jira_client, jira_issue.key)]
@@ -181,7 +181,7 @@ class Story(Issue):
     def json(self):
         """ Return the json to create the item in Clubhouse """
         json = super().json() # default json for all issues
-        json["workflow_state_id"] = self.status.public_id
+        json["workflow_state_id"] = StoryStates.get_id(self.status)
         json["story_type"] = self.story_type
         if self.epic:
             json["epic_id"] = self.epic.target
@@ -193,14 +193,16 @@ class Story(Issue):
 
     def save(self):
         logging.info("Saving story '{}'".format(self.name))
-        # 0. Upload the files (so that they have an id)
-        [a.save() for a in self.attachments]
-
-        # 1. Create the object
-        super().save()
-        # 2. Add subtasks
-        if self.subtasks:
-            [s.save() for s in self.subtasks]
+        if self.story_type:
+            # 0. Upload the files (so that they have an id)
+            [a.save() for a in self.attachments]
+            # 1. Create the object
+            super().save()
+            # 2. Add subtasks
+            if self.subtasks:
+                [s.save() for s in self.subtasks]
+        else: # null type
+            logging.warning("--> Story '{}' of unknown type '{}' was not saved".format(self.name, self.source.fields.issuetype.name))
 
 # ----------------------------------------
 # class Subtask
@@ -240,7 +242,7 @@ class Attachment:
         self.source = jira_attachment
         self.target = None
         self.filename = jira_attachment.filename
-        self.author = Member(jira_attachment.author.name)
+        self.author = Config.mapping('users').get(jira_attachment.author.name)
         self.created = jira_attachment.created
         self.size = jira_attachment.size
         self.mimeType = jira_attachment.mimeType

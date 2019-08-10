@@ -1,7 +1,7 @@
 from config import Config
 from jiratools import JiraTools
 from issue import Epic, Story
-from registry import Member
+from registry import Members
 import logging
 
 class Project:
@@ -14,7 +14,7 @@ class Project:
 
         self.sprints = {}
         self.description = self.source.description
-        self.owner = Member(self.source.lead.name)
+        self.owner = Config.mapping('users').get(self.source.lead.name)
         # Get all epics in project (and collect the issues in each epic)
         self.epics = [Epic(e) for e in JiraTools.get_project_epics(Config.jira_client, self.source.key)]
         # Also collect the issues without an epic

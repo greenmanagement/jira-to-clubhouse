@@ -1,4 +1,5 @@
 from config import Config
+import logging
 
 class Link:
     """
@@ -47,8 +48,11 @@ class Link:
         if isinstance(self.destination, Issue):
             return self.destination
         else:
-            self.destination= self.origin.project.issue_index[self.destination]
-            return self.destination
+            try:
+                self.destination= self.origin.project.issue_index[self.destination]
+                return self.destination
+            except:
+                return None # target does not exist in the project
 
     def json(self):
         json = {
@@ -56,11 +60,14 @@ class Link:
             "subject_id": self.subject.target,
             "verb": self.link_type
         }
-        return json
+        return json if json["object_id"] and json["subject_id"] else None
 
     def save(self):
-        response = Config.clubhouse_client.post(self.urlbase, json=self.json())
-        self.target_id = response["id"]
+        if self.object and self.subject and self.object.target and self.subject.target:
+            response = Config.clubhouse_client.post(self.urlbase, json=self.json())
+            self.target_id = response["id"]
+        else:
+            logging.warning("Link between '{}' and '{}' not saved".format(self.origin, self.destination))
 
 
 

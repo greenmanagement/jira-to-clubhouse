@@ -10,79 +10,74 @@ class Registry():
     name_key = 'name'
     id_key = 'id'
     element_list_key = None
-    mapping = None
+    #mapping = None
 
-    _elements = {}  # local static storage of raw elements (= ref/id pairs loaded from CH)
-    _dict = {} # local static storage of initialize elements (= jira/element pairs)
+    #_elements = {}  # local static storage of raw elements (= ref/id pairs loaded from CH)
+    #_dict = {} # local static storage of initialize elements (= jira/element pairs)
 
-    def __new__(cls, jira_ref):
+    @classmethod
+    def get_id(cls, ref):
         """
-        When a new registry element is created, first check if it already exists in the static storage.
+        Retrieve a item from the registry, given its jira reference
         If so, return the local copy
         Otherwise create a new object
         """
-        if jira_ref in cls._dict:
-            return cls._dict[jira_ref]
-        else:
-            self = super(Registry, cls).__new__(cls)
-            self._dict[jira_ref] = self # Register new object
-            return self
+        if not hasattr(cls, 'items'):
+            cls.items = {cls.extract_reference(e): cls.extract_id(e)
+                         for e in cls.load_source_elements(Config.clubhouse_client.get(cls.urlbase))}
 
-    def __init__(self, jira_ref):
-        """
-        Initialize the new registry element by recording it in the {jira ref -> element} dictionary
-        :param jira_ref: reference if the item in jira
-        :param ch_ref: name of the item in jira (not the id/uuid)
-        """
-        self.source = jira_ref
-        self.public_id = self.elements[self.map(jira_ref)]
+        return cls.items[ref]
 
-    @property
-    def elements(self):
-        """
-        This method returns the list of elements in the registry
-        The first time it is called: initialize the local static storage
-        Futher calls will return the local storage without connecting to CH
-        """
-        if not self._elements:
-            self._elements = {self.get_reference(e): self.get_id(e)
-                              for e in self.get_source_elements(Config.clubhouse_client.get(self.urlbase))}
-        return self._elements
-
-    def get_reference(self, e):
+    @classmethod
+    def extract_reference(cls, e):
         """
         This method extracts the 'name' of an element from the json returned by the API
+        [This default method may be redefined in the subclasses]
         """
-        return e[self.name_key]
+        return e[cls.name_key]
 
-    def get_id(self, e):
-        return e[self.id_key]
+    @classmethod
+    def extract_id(cls, e):
+        """This method extracts the 'id' of an element from the json returned by the API
+        [This default method may be redefined in the subclasses]
+        """
+        return e[cls.id_key]
 
-    def get_source_elements(self, obj):
-        return obj[self.element_list_key] if self.element_list_key else obj
+    @classmethod
+    def load_source_elements(cls, obj):
+        """This method extracts the list of elements from the Clubhouse response (which may vary in structure)
+        By default:
+        - if a key has been defined, use it to extract the json subelement
+        - otherwise, return the whole json
+        [This default method may be redefined in the subclasses]
+        """
+        return obj[cls.element_list_key] if cls.element_list_key else obj
 
-    def map(self, source):
-        """Associate a jira key with a element name for this class of elements"""
-        return Config.mapping(self.mapping).get(source)
+    #@classmethod
+    #def map(cls, source):
+    #    """Associate a jira key with a element name for this class of elements"""
+    #    return Config.mapping(cls.mapping).get(source)
 
 
-class Member(Registry):
+class Members(Registry):
     urlbase = 'members'
-    mapping = 'users'
+    #mapping = 'users'
 
-    def get_reference(self, e):
+    @classmethod
+    def extract_reference(self, e):
         return e['profile']['mention_name']
 
 
-class EpicState(Registry):
+class EpicStates(Registry):
     urlbase = 'epic-workflow'
     element_list_key = 'epic_states'
-    mapping = 'epic'
+    #mapping = 'epic'
 
 
-class StoryState(Registry):
+class StoryStates(Registry):
     urlbase = 'workflows'
-    mapping = 'status'
+    #mapping = 'status'
 
-    def get_source_elements(self, obj):
+    @classmethod
+    def load_source_elements(self, obj):
         return obj[0].get('states')
