@@ -1,71 +1,59 @@
 {
-  "jira": {
-    "server": "https://opexalliance.atlassian.net",
-    "user": "aurelien@opexalliance.com",
-    "token": "5MpeeKC4jHBy5D1ebke0E6E3"
-  },
-  "clubhouse": {
-    "token": "5d4079e7-42b9-4824-bbef-b741b1b78710"
-  },
   "attachments": {
     "folder": "/Users/aurelien/Downloads/jira2clubhouse"
   },
-  "projects": [ "OPF"],
-  "noprojects": ["NA" ,"ECOM", "OMG", "OP", "OPF", "MGT", "SD" ],
-  "mappings": {
-    "users": {
-      "admin": "aurelienslodzian",
-      "lisa": "aurelienslodzian",
-      "duboiscorenthin": "aurelienslodzian"
-    },
-    "status": {
-        "In Progress": "In Development",
-        "Selected for Development": "Ready for Development",
-        "Done": "Completed",
-        "To be tested": "Ready for Review",
-        "Canceled": "Canceled",
-        "In Review": "Ready for Review",
-        "Backlog": "Unscheduled",
-        "Proposed": "Unscheduled"
-      },
-    "subtask": {
-        "In Progress": false,
-        "Selected for Development": false,
-        "Done": true,
-        "To be tested": false,
-        "Canceled": true,
-        "In Review": false,
-        "Backlog": false
-      },
-    "epic": {
-        "In Progress": "in progress",
-        "Selected for Development": "to do",
-        "Done": "done",
-        "To be tested": "in progress",
-        "Canceled": "canceled",
-        "In Review": "in progress",
-        "Rejected": "canceled",
-        "Backlog": "to do",
-        "Accepted": "to do",
-        "Planned": "to do",
-        "Deployed": "done",
-        "Proposed": "Proposed"
-      },
-    "links": {
-      "Duplicate": "duplicates",
-      "Blocks": "blocks",
-      "Relates": "relates to",
-      "Tested by": null,
-      "Problem/Incident": null,
-      "Cloners": "duplicates"
-    },
-    "stories": {
-      "Task": "chore",
-      "Sub-task": null,
-      "Story": "feature",
-      "Bug": "bug",
-      "Epic":  null,
-      "Test": null
-    }
+  "users": {
+    "admin": "aurelienslodzian",
+    "lisa": "aurelienslodzian",
+    "duboiscorenthin": "aurelienslodzian"
+  },
+  "issue_states": {
+    "In Progress": "In Development",
+    "Selected for Development": "Ready for Development",
+    "Done": "Completed",
+    "To be tested": "Ready for Review",
+    "Canceled": "Canceled",
+    "In Review": "Ready for Review",
+    "Backlog": "Unscheduled",
+    "Proposed": "Unscheduled"
+  },
+  "subtask_states": {
+    "In Progress": false,
+    "Selected for Development": false,
+    "Done": true,
+    "To be tested": false,
+    "Canceled": true,
+    "In Review": false,
+    "Backlog": false
+  },
+  "epic_states": {
+    "In Progress": "in progress",
+    "Selected for Development": "to do",
+    "Done": "done",
+    "To be tested": "in progress",
+    "Canceled": "canceled",
+    "In Review": "in progress",
+    "Rejected": "canceled",
+    "Backlog": "to do",
+    "Accepted": "to do",
+    "Planned": "to do",
+    "Deployed": "done",
+    "Proposed": "proposed"
+  },
+  "link_types": {
+    "Duplicate": "duplicates",
+    "Blocks": "blocks",
+    "Relates": "relates to",
+    "Tested by": null,
+    "Problem/Incident": null,
+    "Cloners": "duplicates"
+  },
+  "story_types": {
+    "Task": "chore",
+    "Sub-task": null,
+    "Story": "feature",
+    "Bug": "bug",
+    "Epic": null,
+    "Test": null
   }
 }

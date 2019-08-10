@@ -1,4 +1,3 @@
-from config import Config
 import logging
 
 class Link:
@@ -62,12 +61,10 @@ class Link:
         }
         return json if json["object_id"] and json["subject_id"] else None
 
-    def save(self):
+    def save(self, clubhouse):
         if self.object and self.subject and self.object.target and self.subject.target:
-            response = Config.clubhouse_client.post(self.urlbase, json=self.json())
+            response = clubhouse.post(self.urlbase, json=self.json())
             self.target_id = response["id"]
         else:
             logging.warning("Link between '{}' and '{}' not saved".format(self.origin, self.destination))
-
-
 

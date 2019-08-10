@@ -15,7 +15,8 @@ class Issue:
     """
     urlbase = None
 
-    def __init__(self, jira_issue):
+    def __init__(self, jira_client, jira_issue):
+        self.jira_client = jira_client
         self.epic = None
         self._project = None
         self.source = jira_issue
@@ -27,18 +28,18 @@ class Issue:
         self.external_id = "JIRA_{}".format(self.source.key)
         self.deadline = fields.duedate
         self.description = fields.description
-        self.owners = [Config.mapping('users').get(fields.assignee.key)] if fields.assignee else None
-        self.requester = Config.mapping('users').get(fields.reporter.key)
-        self.comments = [Comment(self, c.id, Config.mapping('users').get(c.author.key), c.created, c.body)
+        self.owners = [Config.get('users').get(fields.assignee.key)] if fields.assignee else None
+        self.requester = Config.get('users').get(fields.reporter.key)
+        self.comments = [Comment(self, c.id, Config.get('users').get(c.author.key), c.created, c.body)
                          for c in fields.comment.comments]
         self.components = fields.components
-        self.followers = [Config.mapping('users').get(u.name) for u in JiraTools.issue_watchers(Config.jira_client, self.source)]
+        self.followers = [Config.get('users').get(u.name) for u in JiraTools.issue_watchers(jira_client, self.source)]
         self.attachments = [Attachment(a) for a in fields.attachment]
         self.subtasks = None
         self.links = []
         self.sprints = [re.search("id=([0-9]+),", sprint).group(1) for sprint in fields.customfield_10115] if fields.customfield_10115 else []
         for link in fields.issuelinks:
-            target_type = Config.mapping("links").get(link.type.name)
+            target_type = Config.get("link_types").get(link.type.name)
             if hasattr(link, 'outwardIssue') and target_type:  # keep only types that exist in the mapping
                 self.links.append(Link(self, link.outwardIssue.key, target_type))
 
@@ -80,15 +81,15 @@ class Issue:
             json["labels"] = sprint_labels
         return json
 
-    def save(self):
+    def save(self, clubhouse):
         """
         Common method to create all kinds of issues in clubhouse
         """
         # 1. Create the object
         json = self.json()
-        response = Config.clubhouse_client.post(self.urlbase, json=json)
+        response = clubhouse.post(self.urlbase, json=json)
         self.target = response["id"]
-        [c.save() for c in self.comments]
+        [c.save(clubhouse) for c in self.comments]
 
 
 # ----------------------------------------
@@ -111,9 +112,9 @@ class Comment:
             "text": self.comment
         }
 
-    def save(self):
+    def save(self, clubhouse):
         """ Method to save a comment. May be used instead of including the jons in the item creation itself"""
-        response = Config.clubhouse_client.post(self.issue.urlbase, self.issue.target, 'comments', json=self.json())
+        response = clubhouse.post(self.issue.urlbase, self.issue.target, 'comments', json=self.json())
         self.target = response["id"]
 
 # ----------------------------------------
@@ -125,10 +126,10 @@ class Epic(Issue):
     """
     urlbase = 'epics'
 
-    def __init__(self, jira_epic):
-        super().__init__(jira_epic)
-        self.status = Config.mapping('epic').get(self.source.fields.status.name)
-        self.stories = [Story(s) for s in JiraTools.get_epic_issues(Config.jira_client, epic=self.source.key)]
+    def __init__(self, jira_client, jira_epic):
+        super().__init__(jira_client, jira_epic)
+        self.status = Config.get('epic_states').get(self.source.fields.status.name)
+        self.stories = [Story(jira_client, s) for s in JiraTools.get_epic_issues(jira_client, epic=self.source.key)]
         for s in self.stories:
             s.epic = self
 
@@ -144,18 +145,18 @@ class Epic(Issue):
         json["epic_state_id"] = EpicStates.get_id(self.status)
         return json
 
-    def save(self):
+    def save(self, clubhouse):
         logging.info("Saving epic '{}'".format(self.name))
-        self.delete()
-        super().save()
+        self.delete(clubhouse)
+        super().save(clubhouse)
         for s in self.stories:
-            s.save()
+            s.save(clubhouse)
 
-    def delete(self):
+    def delete(self, clubhouse):
         # Should search by external id, but it does not work
-        epics = Config.clubhouse_client.get("search", self.urlbase, json={"query": "name={}".format(self.name)})
+        epics = clubhouse.get("search", self.urlbase, json={"query": "name={}".format(self.name)})
         if epics and epics["total"] > 0:
-                [Config.clubhouse_client.delete(self.urlbase, e["id"])
+                [clubhouse.delete(self.urlbase, e["id"])
                  for e in epics["data"]
                  if e["external_id"] == self.external_id]
 
@@ -168,13 +169,13 @@ class Story(Issue):
     """
     urlbase = 'stories'
 
-    def __init__(self, jira_issue):
-        super().__init__(jira_issue)
-        self.story_type = Config.mapping('stories').get(self.source.fields.issuetype.name)
-        self.status = Config.mapping('status').get(self.source.fields.status.name)
+    def __init__(self, jira_client, jira_issue):
+        super().__init__(jira_client, jira_issue)
+        self.story_type = Config.get('story_types').get(self.source.fields.issuetype.name)
+        self.status = Config.get('issue_states').get(self.source.fields.status.name)
         self.subtasks = []
         if jira_issue.fields.subtasks:
-            self.subtasks = [Subtask(s) for s in JiraTools.get_subtasks(Config.jira_client, jira_issue.key)]
+            self.subtasks = [Subtask(jira_client, s) for s in JiraTools.get_subtasks(jira_client, jira_issue.key)]
             for s in self.subtasks:
                 s.parent = self
 
@@ -191,16 +192,16 @@ class Story(Issue):
             json["file_ids"] = [a.target for a in self.attachments]
         return json
 
-    def save(self):
+    def save(self, clubhouse):
         logging.info("Saving story '{}'".format(self.name))
         if self.story_type:
             # 0. Upload the files (so that they have an id)
-            [a.save() for a in self.attachments]
+            [a.save(clubhouse) for a in self.attachments]
             # 1. Create the object
-            super().save()
+            super().save(clubhouse)
             # 2. Add subtasks
             if self.subtasks:
-                [s.save() for s in self.subtasks]
+                [s.save(clubhouse) for s in self.subtasks]
         else: # null type
             logging.warning("--> Story '{}' of unknown type '{}' was not saved".format(self.name, self.source.fields.issuetype.name))
 
@@ -210,9 +211,9 @@ class Story(Issue):
 class Subtask(Issue):
     urlbase = 'tasks'
 
-    def __init__(self, jira_issue):
-        super().__init__(jira_issue)
-        self.status = Config.mapping("subtask").get(self.source.fields.status.name)
+    def __init__(self, jira_client, jira_issue):
+        super().__init__(jira_client, jira_issue)
+        self.status = Config.get("subtask_states").get(self.source.fields.status.name)
         self.description = self.name
         self.parent = None
 
@@ -229,9 +230,9 @@ class Subtask(Issue):
         #    json["owner_ids"] = [o.public_id for o in self.owners]
         return json
 
-    def save(self):
+    def save(self, clubhouse):
         """ Method to save a comment. May be used instead of including the jons in the item creation itself"""
-        response = Config.clubhouse_client.post(self.parent.urlbase, self.parent.target, self.urlbase, json=self.json())
+        response = clubhouse.post(self.parent.urlbase, self.parent.target, self.urlbase, json=self.json())
         self.target = response["id"]
 
 # ----------------------------------------
@@ -242,12 +243,12 @@ class Attachment:
         self.source = jira_attachment
         self.target = None
         self.filename = jira_attachment.filename
-        self.author = Config.mapping('users').get(jira_attachment.author.name)
+        self.author = Config.get('users').get(jira_attachment.author.name)
         self.created = jira_attachment.created
         self.size = jira_attachment.size
         self.mimeType = jira_attachment.mimeType
         self.url = jira_attachment.content
-        folder = Config.dict.attachments.folder
+        folder = Config.get("attachments").get('folder')
         self.localfile = "{}/{}".format(folder, self.filename)
         if not os.path.exists(folder):
             os.makedirs(folder)
@@ -255,11 +256,11 @@ class Attachment:
             f.write(jira_attachment.get())
             f.close()
 
-    def save(self):
+    def save(self, clubhouse):
         """
         Upload a file to the server
         """
         files = {"file": (self.filename, open(self.localfile, 'rb'), self.mimeType)}
-        response = Config.clubhouse_client.post('files', files=files)
+        response = clubhouse.post('files', files=files)
         self.target = response[0]["id"]
         return self.target

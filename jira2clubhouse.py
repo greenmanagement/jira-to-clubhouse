@@ -4,26 +4,31 @@ from clubhouse import ClubhouseClient
 from project import Project
 from config import Config
 import logging
+from registry import Members, EpicStates, StoryStates
 
 ## Parse command line
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', '-c', required=True)  # Config
 parser.add_argument('--log', default=logging.INFO) # log level
+parser.add_argument('--jira_server', '-j', required=True) # log level
+parser.add_argument('--jira_user', '-u', required=True) # log level
+parser.add_argument('--jira_token', '-t', required=True) # log level
+parser.add_argument('--clubhouse_token', '-k', required=True) # log level
+parser.add_argument('--project', '-p', nargs='+')
 args = parser.parse_args()
 logging.basicConfig(level=args.log)
 
-## Open the configuration file
+## Load the configuration file
 Config.load(args.config)
 
-## Connect
-Config.jira_client = JIRA(Config.dict.jira.server, basic_auth=(Config.dict.jira.user, Config.dict.jira.token))
-Config.clubhouse_client = ClubhouseClient(Config.dict.clubhouse.token)
+## Connect and initialize
+jira_client = JIRA(args.jira_server, basic_auth=(args.jira_user, args.jira_token))
+clubhouse_client = ClubhouseClient(args.clubhouse_token)
+Members.init(clubhouse_client)
+StoryStates.init(clubhouse_client)
+EpicStates.init(clubhouse_client)
 
-## Take the list of jira projects and filter agains the mapping defined in the config
-#for jp in [p for p in Config.jira_client.projects()
-#           if p.key in Config.get('projects')]:
-for key in Config.get('projects'):
+## Load and Save each project
+for key in args.project:
     logging.info("Load project '{}'".format(key))
-    Project(Config.jira_client.project(key)).save()
-
-
+    Project(jira_client, key).save(clubhouse_client)

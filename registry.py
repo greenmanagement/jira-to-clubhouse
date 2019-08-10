@@ -1,6 +1,3 @@
-from config import Config
-
-
 class Registry():
     """
     Abstract class for representing clubhouse reference elements like: users, states, etc.
@@ -10,10 +7,16 @@ class Registry():
     name_key = 'name'
     id_key = 'id'
     element_list_key = None
+    items = {}
     #mapping = None
 
     #_elements = {}  # local static storage of raw elements (= ref/id pairs loaded from CH)
     #_dict = {} # local static storage of initialize elements (= jira/element pairs)
+
+    @classmethod
+    def init(cls, clubhouse_client):
+        cls.items = {cls.extract_reference(e): cls.extract_id(e)
+                     for e in cls.load_source_elements(clubhouse_client.get(cls.urlbase))}
 
     @classmethod
     def get_id(cls, ref):
@@ -22,10 +25,6 @@ class Registry():
         If so, return the local copy
         Otherwise create a new object
         """
-        if not hasattr(cls, 'items'):
-            cls.items = {cls.extract_reference(e): cls.extract_id(e)
-                         for e in cls.load_source_elements(Config.clubhouse_client.get(cls.urlbase))}
-
         return cls.items[ref]
 
     @classmethod
@@ -52,11 +51,6 @@ class Registry():
         [This default method may be redefined in the subclasses]
         """
         return obj[cls.element_list_key] if cls.element_list_key else obj
-
-    #@classmethod
-    #def map(cls, source):
-    #    """Associate a jira key with a element name for this class of elements"""
-    #    return Config.mapping(cls.mapping).get(source)
 
 
 class Members(Registry):
