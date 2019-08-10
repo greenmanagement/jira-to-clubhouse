@@ -32,3 +32,4 @@ EpicStates.init(clubhouse_client)
 for key in args.project:
     logging.info("Load project '{}'".format(key))
     Project(jira_client, key).save(clubhouse_client)
+
